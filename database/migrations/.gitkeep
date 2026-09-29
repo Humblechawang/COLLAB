@@ -1,0 +1,3 @@
+Future schema changes go here as numbered .sql files, e.g. 001_add_teams_theme.sql.
+The migration runner (backend/src/db/migrate.js) applies schema.sql once, then
+applies any files in this folder in filename order.

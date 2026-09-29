@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      NODE_ENV: test
+      APP_ENV: test
+      CORS_ORIGINS: http://localhost:8080
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run lint --if-present
+      - run: npm test
+      - name: Audit dependencies for known vulnerabilities
+        run: npm audit --audit-level=high
+
+  secrets-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fail if env or credential files were committed
+        run: |
+          set -e
+          if git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v '\.example$'; then
+            echo "A .env file is committed to the repo. Remove it and rotate any secrets it contained.";
+            exit 1;
+          fi
+          if git ls-files | grep -Ei '(^|/)(id_rsa|credentials\.json|\.pem$|\.p12$)$'; then
+            echo "A credential material file is committed to the repo.";
+            exit 1;
+          fi
+          if git ls-files | grep -E '(^|/)frontend/config\.js$'; then
+            echo "frontend/config.js must not be committed.";
+            exit 1;
+          fi
