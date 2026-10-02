@@ -1419,31 +1419,10 @@ body.editorial .scroll-shimmer {
 <script>
 (function(){
 window.COLLAB_CONFIG = Object.assign({
-  allowInstantDemo: true,
   apiUrl: '',
   supabaseUrl: '',
   supabasePublishableKey: ''
 }, window.COLLAB_CONFIG || {});
-
-function isLocalHost() {
-  var h = location.hostname;
-  return h === 'localhost' || h === '127.0.0.1' || h === '[::1]';
-}
-
-function isPrivateNetworkHost() {
-  var host = location.hostname.toLowerCase();
-  if (host.endsWith('.local')) return true;
-  var octets = host.split('.').map(Number);
-  if (octets.length !== 4 || octets.some(function(part){ return !Number.isInteger(part) || part < 0 || part > 255; })) return false;
-  return octets[0] === 10 ||
-    (octets[0] === 192 && octets[1] === 168) ||
-    (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31);
-}
-
-function demoEnabled() {
-  return window.COLLAB_CONFIG.allowInstantDemo === true &&
-    (isLocalHost() || isPrivateNetworkHost() || location.protocol === 'file:');
-}
 
 var esc = function(s){
   return String(s).replace(/[&<>"']/g, function(c){
@@ -1468,6 +1447,10 @@ var IMAGES = {
 var S = {
   user: null,
   accessToken: null,
+  team: null,
+  pendingSignupEmail: '',
+  signupInProgress: false,
+  rejectSignupSession: false,
   tab: 'home',
   showcaseTab: 'overview',
   photoStory: 0,
@@ -1486,9 +1469,9 @@ var S = {
     seoIndex: true
   },
   users: [
-    { name: 'Aarav Sharma', email: 'aarav@collab.app', pw: 'ChangeMe!2026', role: 'admin', bio: 'Founder & Product Lead at Team Phoenix.', av: IMAGES.teamAarav },
-    { name: 'Meera Iyer', email: 'meera@collab.app', pw: 'ChangeMe!2026', role: 'member', bio: 'AI Researcher & Clinical Data Analyst.', av: IMAGES.teamMeera },
-    { name: 'Kabir Rao', email: 'kabir@collab.app', pw: 'ChangeMe!2026', role: 'member', bio: 'Full-stack Systems & iOS Engineer.', av: IMAGES.teamKabir }
+    { name: 'Aarav Sharma', email: 'aarav@collab.app', role: 'admin', bio: 'Founder & Product Lead at Team Phoenix.', av: IMAGES.teamAarav },
+    { name: 'Meera Iyer', email: 'meera@collab.app', role: 'member', bio: 'AI Researcher & Clinical Data Analyst.', av: IMAGES.teamMeera },
+    { name: 'Kabir Rao', email: 'kabir@collab.app', role: 'member', bio: 'Full-stack Systems & iOS Engineer.', av: IMAGES.teamKabir }
   ],
   work: [
     { id: 1, title: 'Pulse Health Beta', st: 'Launched', desc: 'Daily mood & physiological metric check-ins. 400+ active student testers.', link: 'https://pulse.demo.app', file: null, img: IMAGES.pulseApp },
@@ -1521,10 +1504,15 @@ function supabaseClient() {
 
 function applySession(session) {
   if (!session || !session.user) {
+    S.user = null;
     S.accessToken = null;
+    S.team = null;
+    S.pendingSignupEmail = '';
     return;
   }
   S.accessToken = session.access_token || null;
+  S.team = null;
+  S.pendingSignupEmail = '';
   var u = session.user;
   var name = (u.user_metadata && (u.user_metadata.full_name || u.user_metadata.name)) || (u.email || 'Member');
   S.user = {
@@ -1569,8 +1557,7 @@ function nav() {
     '</div>' +
     '<div class="nav-actions">' +
       (S.user ?
-        '<a class="btn sm" href="#/app">Dashboard</a>' :
-        (demoEnabled() ? '<button class="btn sm g" data-a="demologin">Try demo</button>' : '') +
+        '<a class="btn sm" href="' + (S.team ? '#/app' : '#/setup') + '">' + (S.team ? 'Dashboard' : 'Set up team') + '</a>' :
         '<a class="btn sm" href="#/signup">Get Started</a>'
       ) +
       '<button class="mob-btn" data-a="mobtoggle" aria-label="Toggle navigation menu"><span class="menu-lines" aria-hidden="true"></span></button>' +
@@ -1582,8 +1569,8 @@ function nav() {
     '<a href="#/security">Security Architecture</a>' +
     '<a href="#/contact">Contact Team</a>' +
     (S.user ?
-      '<a class="btn full" href="#/app" style="margin-top:10px">Open Dashboard</a>' :
-      (demoEnabled() ? '<button class="btn full" data-a="demologin" style="margin-top:10px">Try demo workspace</button>' : '')
+      '<a class="btn full" href="' + (S.team ? '#/app' : '#/setup') + '" style="margin-top:10px">' + (S.team ? 'Open Dashboard' : 'Set up team') + '</a>' :
+      ''
     ) +
   '</div>';
 }
@@ -1679,7 +1666,6 @@ V['/'] = function() {
     '<p class="lead" data-reveal>Replace ephemeral slide decks and lost demos with a high-fidelity home. Give your crew, your research papers, and your shipped milestones a stage the world can discover.</p>' +
     '<div class="cta" data-reveal>' +
       '<a class="btn" href="#/signup">Create your team page</a>' +
-      '<button class="btn g" data-a="demologin">Explore the demo workspace</button>' +
     '</div>' +
 
     /* High-Fidelity Interactive macOS Product Window */
@@ -1989,7 +1975,6 @@ V['/'] = function() {
     '<p class="lead" style="margin-top:18px">Join thousands of builders turning scattered code into lasting legacy.</p>' +
     '<div class="cta">' +
       '<a class="btn" href="#/signup">Get started free</a>' +
-      '<button class="btn g" data-a="demologin">Explore the demo workspace</button>' +
     '</div>' +
   '</div></section>';
 };
@@ -2012,7 +1997,6 @@ V['/about'] = function() {
     '</ul>' +
     '<div style="margin-top:40px;display:flex;gap:12px">' +
       '<a class="btn" href="#/signup">Launch your team portfolio</a>' +
-      '<button class="btn g" data-a="demologin">Explore the demo workspace</button>' +
     '</div>' +
   '</div>';
 };
@@ -2127,26 +2111,69 @@ function authView(mode) {
     '<div class="md">' +
       '<div class="auth-mark">COLLAB / TEAM SPACE</div>' +
       '<h2 style="font-size:30px;margin-bottom:6px">' + (su ? 'Create your team space' : 'Welcome back') + '</h2>' +
-      '<p style="color:var(--mute);margin:0 0 20px">' + (su ? 'Set up your portfolio in less than a minute.' : 'Sign in to access your team dashboard.') + '</p>' +
-      (demoEnabled()
-        ? '<div class="demo-entry"><button class="btn full g" data-a="demologin">Enter the demo workspace</button><p>Sample team data · changes reset when you refresh</p></div>' +
-          '<div class="auth-divider">OR SIGN IN WITH EMAIL</div>'
-        : '') +
+      '<p style="color:var(--mute);margin:0 0 20px">' + (su ? 'Create your account and verify your email to get started.' : 'Sign in to continue to team setup.') + '</p>' +
       '<form data-f="' + mode + '" novalidate>' +
-        (su ? '<label for="an">Full Name</label><input id="an" name="n" placeholder="Alex Rivera" autocomplete="name">' : '') +
-        '<label for="ae">Email Address</label><input id="ae" name="e" type="email" placeholder="alex@team.com" autocomplete="email">' +
-        '<label for="ap">Password</label><input id="ap" name="p" type="password" placeholder="••••••••" autocomplete="' + (su ? 'new-password' : 'current-password') + '">' +
+        (su ? '<label for="an">Full Name</label><input id="an" name="n" maxlength="80" placeholder="Alex Rivera" autocomplete="name" required>' : '') +
+        '<label for="ae">Email Address</label><input id="ae" name="e" type="email" maxlength="200" placeholder="alex@team.com" autocomplete="email" required>' +
+        '<label for="ap">Password</label><input id="ap" name="p" type="password" maxlength="200" autocomplete="' + (su ? 'new-password' : 'current-password') + '" required>' +
+        (su ? '<small style="color:var(--mute);display:block;margin-top:6px">At least 6 characters, including uppercase, lowercase, a number, and a special character.</small>' : '') +
         '<p class="err" role="alert"></p>' +
         '<button class="btn full" style="margin-top:14px">' + (su ? 'Create account' : 'Sign in') + '</button>' +
       '</form>' +
       '<p class="hint">' +
         (su ? 'Already have an account? <a href="#/login">Sign in</a>' : 'New to Collab? <a href="#/signup">Create an account</a>') +
       '</p>' +
+      (!su ? '<button class="btn sm g" type="button" data-a="resendotp" style="margin-top:8px">Resend verification code</button>' : '') +
     '</div>' +
   '</div>';
 }
 V['/login'] = function(){ return authView('login'); };
 V['/signup'] = function(){ return authView('signup'); };
+
+V['/verify-email'] = function() {
+  return '<div class="ov" style="background:var(--alt);position:relative;min-height:calc(100vh - 58px)">' +
+    '<div class="md">' +
+      '<div class="auth-mark">COLLAB / EMAIL VERIFICATION</div>' +
+      '<h2 style="font-size:30px;margin-bottom:6px">Verify your email</h2>' +
+      '<p style="color:var(--mute);margin:0 0 20px">Enter the 6-digit code we sent to your email address.</p>' +
+      '<form data-f="verify-email" novalidate>' +
+        '<label for="ve">Email Address</label>' +
+        '<input id="ve" name="e" type="email" autocomplete="email" value="' + esc(S.pendingSignupEmail || '') + '" required>' +
+        '<label for="otp">6-digit verification code</label>' +
+        '<input id="otp" name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" aria-describedby="otp-hint" required>' +
+        '<small id="otp-hint" style="color:var(--mute);display:block;margin-top:6px">The code contains exactly 6 numbers.</small>' +
+        '<p class="err" role="alert"></p>' +
+        '<button class="btn full" style="margin-top:14px">Verify email</button>' +
+      '</form>' +
+      '<button class="btn sm g" type="button" data-a="resendotp" style="margin-top:12px">Send a new code</button>' +
+    '</div>' +
+  '</div>';
+};
+
+V['/setup'] = function() {
+  return '<div class="ov" style="background:var(--alt);position:relative;min-height:calc(100vh - 58px)">' +
+    '<div class="md">' +
+      '<div class="auth-mark">COLLAB / TEAM SETUP</div>' +
+      '<h2 style="font-size:30px;margin-bottom:6px">Set up your team</h2>' +
+      '<p style="color:var(--mute);margin:0 0 20px">Your email is verified. Add the basics for your team space.</p>' +
+      '<form data-f="teamsetup" novalidate>' +
+        '<label for="team-name">Team Name</label>' +
+        '<input id="team-name" name="name" maxlength="60" autocomplete="organization" required>' +
+        '<label for="team-bio">Team Bio</label>' +
+        '<textarea id="team-bio" name="bio" rows="4" maxlength="1000"></textarea>' +
+        '<div class="panel" style="margin-top:18px">' +
+          '<h3>Your team permissions</h3>' +
+          '<p style="margin:8px 0"><b>Owner:</b> the team creator can manage the team, members, and settings.</p>' +
+          '<p style="margin:8px 0 0;color:var(--mute)">You can assign Admin or Member permissions when you invite teammates.</p>' +
+        '</div>' +
+        '<p class="err" role="alert"></p>' +
+        '<p class="hint">Team saving is paused until the database identity and row-level security migration is approved. Your details are not submitted or stored yet.</p>' +
+        '<button class="btn full" type="submit" style="margin-top:14px" disabled>Create team (temporarily unavailable)</button>' +
+      '</form>' +
+      '<button class="btn sm g" type="button" data-a="out" style="margin-top:12px">Sign out</button>' +
+    '</div>' +
+  '</div>';
+};
 
 /* Dashboard Views */
 function avt(u, extraClass) {
@@ -2540,11 +2567,37 @@ document.addEventListener('click', function(e) {
     if (dr) dr.style.display = (dr.style.display === 'flex' ? 'none' : 'flex');
   }
 
-  if (act === 'demologin') {
-    if (!demoEnabled()) return;
-    S.user = S.users[0];
-    location.hash = '#/app';
-    toast('Demo only — not a real account. Refreshing the page signs you out.');
+  if (act === 'resendotp') {
+    var verifyForm = document.querySelector('[data-f="verify-email"]');
+    var loginForm = document.querySelector('[data-f="login"]');
+    var emailField = verifyForm ? verifyForm.querySelector('[name="e"]') :
+      (loginForm ? loginForm.querySelector('[name="e"]') : null);
+    var resendEmail = (emailField && emailField.value || '').trim().toLowerCase();
+    var resendError = verifyForm ? verifyForm.querySelector('.err') :
+      (loginForm ? loginForm.querySelector('.err') : null);
+    if (!resendEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resendEmail)) {
+      if (resendError) resendError.textContent = 'Enter a valid email address first.';
+      return;
+    }
+    var resendClient = supabaseClient();
+    if (!resendClient) {
+      if (resendError) resendError.textContent = 'Set supabaseUrl and supabasePublishableKey in config.js.';
+      return;
+    }
+    a.disabled = true;
+    resendClient.auth.resend({ type: 'signup', email: resendEmail }).then(function(res) {
+      a.disabled = false;
+      if (res.error) {
+        if (resendError) resendError.textContent = 'Unable to send a code right now. Please wait and try again.';
+        return;
+      }
+      S.pendingSignupEmail = resendEmail;
+      if (!verifyForm) location.hash = '#/verify-email';
+      toast('If this address needs verification, a new code has been sent.');
+    }).catch(function() {
+      a.disabled = false;
+      if (resendError) resendError.textContent = 'Unable to send a code right now. Please try again.';
+    });
     return;
   }
 
@@ -2773,11 +2826,22 @@ document.addEventListener('click', function(e) {
   }
 
   if (act === 'out') {
-    S.user = null;
-    S.accessToken = null;
     var sbOut = supabaseClient();
-    if (sbOut) sbOut.auth.signOut();
-    location.hash = '#/';
+    if (!sbOut) {
+      applySession(null);
+      location.hash = '#/';
+      return;
+    }
+    sbOut.auth.signOut().then(function(res) {
+      if (res.error) {
+        toast('Unable to sign out. Please try again.');
+        return;
+      }
+      applySession(null);
+      location.hash = '#/';
+    }).catch(function() {
+      toast('Unable to sign out. Please try again.');
+    });
   }
 });
 
@@ -2834,6 +2898,20 @@ window.__rmPostImg = function() {
 };
 
 /* Form Handling */
+function setAuthFormBusy(form, busy) {
+  var button = form.querySelector('button[type="submit"], button:not([type])');
+  if (button) {
+    button.disabled = busy;
+    button.setAttribute('aria-busy', String(busy));
+  }
+}
+
+function isDuplicateSignup(res) {
+  if (!res || !res.data || !res.data.user) return false;
+  var user = res.data.user;
+  return Array.isArray(user.identities) && user.identities.length === 0;
+}
+
 document.addEventListener('submit', function(e) {
   e.preventDefault();
   var f = e.target, k = f.dataset.f, d = new FormData(f);
@@ -2842,23 +2920,28 @@ document.addEventListener('submit', function(e) {
 
   if (k === 'login') {
     var email = (d.get('e') || '').toString().trim().toLowerCase();
-    var pw = d.get('p') || '';
+    var pw = (d.get('p') || '').toString();
     var sb = supabaseClient();
     if (!sb) {
       bad('Set supabaseUrl and supabasePublishableKey in config.js.');
       return;
     }
+    if (!email || !pw) {
+      bad('Enter your email and password.');
+      return;
+    }
+    setAuthFormBusy(f, true);
     sb.auth.signInWithPassword({ email: email, password: pw }).then(function(res) {
+      setAuthFormBusy(f, false);
       if (res.error) {
-        bad('Incorrect email or password.');
+        bad('Incorrect email or password. If you need a verification code, request one below.');
         return;
       }
       applySession(res.data.session);
-      var api = window.COLLAB_CONFIG.apiUrl;
-      if (api) {
-        fetch(api.replace(/\/$/, '') + '/api/auth/me', { headers: apiHeaders() }).catch(function() {});
-      }
-      location.hash = '#/app';
+      location.hash = '#/setup';
+    }).catch(function() {
+      setAuthFormBusy(f, false);
+      bad('Unable to sign in right now. Check your connection and try again.');
     });
     return;
   }
@@ -2866,31 +2949,91 @@ document.addEventListener('submit', function(e) {
   if (k === 'signup') {
     var name = (d.get('n') || '').toString().trim();
     var email = (d.get('e') || '').toString().trim().toLowerCase();
-    var pw = d.get('p') || '';
+    var pw = (d.get('p') || '').toString();
     if (name.length < 2) return bad('Please enter your full name.');
-    if (!email.includes('@')) return bad('Please enter a valid email.');
-    if (pw.length < 10) return bad('Password must be at least 10 characters.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return bad('Please enter a valid email address.');
+    if (pw.length < 6 || !/[a-z]/.test(pw) || !/[A-Z]/.test(pw) ||
+        !/[0-9]/.test(pw) || !/[^A-Za-z0-9]/.test(pw)) {
+      return bad('Use at least 6 characters with uppercase, lowercase, a number, and a special character.');
+    }
     var sbSu = supabaseClient();
     if (!sbSu) {
       bad('Set supabaseUrl and supabasePublishableKey in config.js.');
       return;
     }
+    setAuthFormBusy(f, true);
+    S.signupInProgress = true;
     sbSu.auth.signUp({
       email: email,
       password: pw,
       options: { data: { full_name: name } }
     }).then(function(res) {
+      S.signupInProgress = false;
+      setAuthFormBusy(f, false);
       if (res.error) {
-        bad('Could not create the account. Try a different email or sign in.');
+        bad(res.error.code === 'user_already_exists' || res.error.status === 409
+          ? 'An account with this email already exists. Sign in instead.'
+          : 'Unable to create the account right now. Please try again.');
+        return;
+      }
+      if (isDuplicateSignup(res)) {
+        bad('An account with this email already exists. Sign in instead.');
         return;
       }
       if (res.data.session) {
-        applySession(res.data.session);
-        location.hash = '#/app';
+        S.rejectSignupSession = true;
+        sbSu.auth.signOut().then(function(signOutRes) {
+          S.rejectSignupSession = false;
+          applySession(null);
+          bad(signOutRes.error
+            ? 'Email verification is disabled. Close this tab and enable email confirmation in Supabase before continuing.'
+            : 'Email code verification is not enabled for this Supabase project. Enable email confirmations, then try again.');
+        }).catch(function() {
+          S.rejectSignupSession = false;
+          applySession(null);
+          bad('Email verification is disabled. Close this tab and enable email confirmation in Supabase before continuing.');
+        });
         return;
       }
-      bad('Check your email to confirm the account, then sign in.');
+      S.pendingSignupEmail = email;
+      location.hash = '#/verify-email';
+    }).catch(function() {
+      S.signupInProgress = false;
+      setAuthFormBusy(f, false);
+      bad('Unable to create the account right now. Check your connection and try again.');
     });
+    return;
+  }
+
+  if (k === 'verify-email') {
+    var verifyEmail = (d.get('e') || '').toString().trim().toLowerCase();
+    var otp = (d.get('otp') || '').toString().trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(verifyEmail)) return bad('Please enter the email address used to create the account.');
+    if (!/^\d{6}$/.test(otp)) return bad('Enter the 6-digit code from your email.');
+    var sbVerify = supabaseClient();
+    if (!sbVerify) {
+      bad('Set supabaseUrl and supabasePublishableKey in config.js.');
+      return;
+    }
+    setAuthFormBusy(f, true);
+    sbVerify.auth.verifyOtp({ email: verifyEmail, token: otp, type: 'signup' }).then(function(res) {
+      setAuthFormBusy(f, false);
+      if (res.error || !res.data || !res.data.session) {
+        bad('That code is invalid or expired. Check the code or request a new one.');
+        return;
+      }
+      S.pendingSignupEmail = '';
+      applySession(res.data.session);
+      location.hash = '#/setup';
+    }).catch(function() {
+      setAuthFormBusy(f, false);
+      bad('Unable to verify the code right now. Check your connection and try again.');
+    });
+    return;
+  }
+
+  if (k === 'teamsetup') {
+    bad('Team creation is paused until the database identity and row-level security migration is approved. Your details have not been submitted.');
     return;
   }
 
@@ -3225,8 +3368,16 @@ function shimmerRevealHeadings(element) {
 /* Routing */
 function route() {
   var h = location.hash.slice(1) || '/', p = h.split('?')[0];
-  if (p === '/app' && !S.user) {
+  if ((p === '/app' || p === '/setup') && !S.user) {
     location.hash = '#/login';
+    return;
+  }
+  if (p === '/app' && !S.team) {
+    location.hash = '#/setup';
+    return;
+  }
+  if ((p === '/login' || p === '/signup' || p === '/verify-email') && S.user) {
+    location.hash = S.team ? '#/app' : '#/setup';
     return;
   }
   if (!V[p]) p = '/';
@@ -3253,6 +3404,13 @@ function boot() {
     route();
     return;
   }
+  sb.auth.onAuthStateChange(function(event, session) {
+    if (event === 'SIGNED_IN' && (S.signupInProgress || S.rejectSignupSession)) return;
+    applySession(session);
+    if (event === 'SIGNED_OUT' && (location.hash === '#/app' || location.hash === '#/setup')) {
+      location.hash = '#/login';
+    }
+  });
   sb.auth.getSession().then(function(res) {
     applySession(res.data && res.data.session);
     route();

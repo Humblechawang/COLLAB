@@ -9,4 +9,8 @@
 - Portfolio visibility: only owners/admins can update team settings, including `isPublic`; visibility changes are written to the audit log. Private teams remain readable by members.
 - Invite roles: API validation only permits `admin` or `member`; owner status must be assigned by an existing owner and cannot be granted by an invite.
 - Uploads: HTTP 503.
-- Instant Demo: enabled for local preview only (`localhost`, loopback, RFC1918 private IPs, `.local`, or direct `file:` URL). The location check blocks public hosts; sample edits are in-memory and reset on refresh.
+- Auth: Supabase Auth JS handles signup, six-digit email OTP verification, sign-in, and sign-out. The browser bundle contains only the publishable key; never add a service-role key.
+- Password policy: the UI checks a minimum of six characters plus uppercase, lowercase, digit, and special character. Enforce the same policy in Supabase Auth settings; client-side checks alone are bypassable.
+- OTP policy: require email confirmation and configure the Supabase email template to send a six-digit token. Rate limits must be configured in Supabase Auth because the browser calls Auth directly.
+- No Instant Demo or shared demo-account sign-in is available.
+- Team setup is not persisted until the separate Auth-to-legacy-user identity and RLS migration is reviewed and approved. Do not work around this with direct PostgREST access or a service-role key.

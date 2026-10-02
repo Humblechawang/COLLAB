@@ -22,3 +22,5 @@ collab/
 5. `npm --prefix backend run dev` and serve `frontend` on port 8080.
 
 Custom passwords are not imported. Uploads return 503 until Storage is approved separately.
+
+Before signup, configure Supabase Auth email confirmation, a six-digit email OTP template, the six-character password requirement (uppercase, lowercase, number, and special character), and Auth rate limits. Team setup is intentionally non-persistent until the documented identity and RLS migration plan is approved.

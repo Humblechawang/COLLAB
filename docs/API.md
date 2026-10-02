@@ -59,4 +59,8 @@ GET list (public vs member visibility). POST JSON only. **Multipart uploads retu
 
 ## Frontend
 
+Use Supabase JS Auth for sign-up, sign-in, six-digit OTP verification/resend, and sign-out; use this API for protected business operations. Do not query tables through the Data API.
+
+The team setup screen is currently non-persistent. Auth-backed writes remain blocked until the legacy `public.users` identity and RLS migration plan is approved; do not bypass this with direct PostgREST calls or a service-role key.
+
 Use Supabase JS **Auth** + Bearer to this API. Do not query tables through the Data API.

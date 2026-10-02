@@ -115,8 +115,10 @@ Collab solves this by providing a unified, public-facing presence with secure pr
 ## 7. Core User Flows
 
 ### 7.1 Team Creation
-- User signs in through Supabase Auth
-- User creates a team with name, slug, and tagline
+- User creates an account using email and password, then verifies the email with a six-digit OTP
+- After verification, the user is shown a team setup page for team name and bio
+- The creator is shown as the team Owner; Admin and Member roles are assigned when teammates are invited
+- User creates a team with name, slug, and bio
 - System validates slug uniqueness
 - System creates team record and assigns owner membership
 
@@ -144,7 +146,10 @@ Collab solves this by providing a unified, public-facing presence with secure pr
 ## 8. Functional Requirements
 
 ### 8.1 Authentication and Session Management
-- Users sign in using Supabase Auth
+- Users create accounts and sign in using Supabase Auth
+- Account creation requires a six-character minimum password containing uppercase, lowercase, numeric, and special characters
+- New accounts must verify their email using a six-digit OTP before continuing
+- Sign-in errors do not distinguish an unknown email from an incorrect password
 - Browser requests include bearer tokens to the API
 - The API validates JWTs and enforces identity-based access rules
 - Role checks and membership checks are applied to protected routes
@@ -251,7 +256,9 @@ The MVP should include:
 ## 11. Acceptance Criteria
 
 ### Authentication
-- A registered user can sign in and retrieve basic profile information
+- A user can sign up, verify a six-digit email OTP, and sign in
+- Duplicate email signup is clearly directed to sign-in
+- A new verified user reaches team setup; the creator is automatically assigned Owner permissions
 - The API rejects unauthorized calls to protected routes
 - Authenticated requests include the expected identity context
 
