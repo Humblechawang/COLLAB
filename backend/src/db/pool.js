@@ -1,10 +1,16 @@
 const { Pool } = require('pg');
+const fs = require('fs');
+const path = require('path');
 const config = require('../config');
 const logger = require('../config/logger');
 
-function sslOption() {
-  if (!config.db.ssl) return false;
-  return { rejectUnauthorized: config.db.sslRejectUnauthorized !== false };
+function sslOption(dbConfig = config.db) {
+  if (!dbConfig.ssl) return false;
+  const ssl = { rejectUnauthorized: dbConfig.sslRejectUnauthorized !== false };
+  if (dbConfig.sslCaFile) {
+    ssl.ca = fs.readFileSync(path.resolve(dbConfig.sslCaFile));
+  }
+  return ssl;
 }
 
 function makePool(connectionString) {
@@ -17,11 +23,24 @@ function makePool(connectionString) {
   });
 }
 
-const pool = makePool(config.db.url);
+let pool = null;
 
-pool.on('error', (err) => {
-  logger.error({ err: { message: err.message, name: err.name } }, 'Unexpected error on idle Postgres client');
-});
+function ensurePool() {
+  if (!config.db.url) {
+    const err = new Error('Database is not configured.');
+    err.status = 503;
+    throw err;
+  }
+
+  if (!pool) {
+    pool = makePool(config.db.url);
+    pool.on('error', (err) => {
+      logger.error({ err: { message: err.message, name: err.name } }, 'Unexpected error on idle Postgres client');
+    });
+  }
+
+  return pool;
+}
 
 function rlsClaimsFor(req) {
   if (req && req.user && req.user.id) {
@@ -39,7 +58,8 @@ async function resetClient(client) {
 }
 
 async function withRls(req, fn) {
-  const client = await pool.connect();
+  const dbPool = ensurePool();
+  const client = await dbPool.connect();
   try {
     await client.query('BEGIN');
     await client.query('select set_config($1, $2, true)', [
@@ -72,9 +92,11 @@ async function withTransaction(req, fn) {
 }
 
 async function queryHealth() {
-  return pool.query('select 1 as ok');
+  return ensurePool().query('select 1 as ok');
 }
 
 module.exports = {
-  pool, query, withTransaction, withRls, makePool, queryHealth, rlsClaimsFor,
+  pool: () => ensurePool(),
+  query, withTransaction, withRls, makePool, queryHealth, rlsClaimsFor,
+  sslOption,
 };

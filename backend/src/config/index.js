@@ -101,6 +101,7 @@ module.exports = {
     migrateUrl: process.env.DATABASE_MIGRATE_URL || process.env.DATABASE_URL || '',
     ssl: process.env.DATABASE_SSL !== 'false',
     sslRejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== 'false',
+    sslCaFile: process.env.DATABASE_SSL_CA_FILE || '',
   },
   supabase: {
     url: supabaseUrl,

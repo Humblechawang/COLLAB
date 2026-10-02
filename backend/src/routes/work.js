@@ -3,7 +3,7 @@ const db = require('../db/pool');
 const config = require('../config');
 const { validate } = require('../utils/validate');
 const { requireAuth, optionalAuth } = require('../middleware/auth');
-const { loadMembership, requireMember, requirePublicOrMember } = require('../middleware/authorize');
+const { loadMembership, requireMember, requirePublicOrMember, canDeleteOwnedResource } = require('../middleware/authorize');
 const { rejectUploads } = require('../middleware/upload');
 const { logAction } = require('../utils/audit');
 
@@ -56,13 +56,27 @@ router.delete('/:teamId/work/:workId', requireAuth, loadMembership(), requireMem
   try {
     const item = await loadTeamWork(req, req.teamId, req.params.workId);
     if (!item) return res.status(404).json({ error: 'Work item not found.' });
-    const canDelete = item.created_by === req.user.id || ['owner', 'admin'].includes(req.membership.role);
-    if (!canDelete) {
+    if (!canDeleteOwnedResource(item.created_by, req.user.id, req.membership.role)) {
       const err = new Error('You can only remove work you added.');
       err.status = 403;
       return next(err);
     }
-    await db.query(req, 'update work_items set deleted_at = now() where id = $1 and team_id = $2', [req.params.workId, req.teamId]);
+    const { rowCount } = await db.query(
+      req,
+      `update work_items w set deleted_at = now()
+       where w.id = $1 and w.team_id = $2 and w.deleted_at is null
+         and exists (
+           select 1 from members m where m.team_id = w.team_id and m.user_id = $3
+         )
+         and (
+           w.created_by = $3
+           or exists (
+             select 1 from members m where m.team_id = w.team_id and m.user_id = $3 and m.role in ('owner', 'admin')
+           )
+         )`,
+      [req.params.workId, req.teamId, req.user.id],
+    );
+    if (!rowCount) return res.status(404).json({ error: 'Work item not found.' });
     await logAction(req, { actorId: req.user.id, teamId: req.teamId, action: 'work.deleted', target: req.params.workId });
     res.json({ ok: true });
   } catch (err) { next(err); }

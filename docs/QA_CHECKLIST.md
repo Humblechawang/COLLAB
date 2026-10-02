@@ -5,9 +5,13 @@ against a live deployment yet — treat every box as unchecked.
 
 ## Functional
 
+- [ ] At phone width, brand lockup reads as C + “ollab” and dashboard controls stay aligned
+- [ ] Home update rail and post media scroll horizontally; Posts timeline scrolls vertically
+- [ ] Scroll reveals and heading shimmer run once and respect reduced motion
+- [ ] Phone can open the LAN preview and use the local demo on the same private network
 - [ ] Sign up, log in, log out, and token refresh all work end to end
-- [ ] Instant Demo is disabled in staging/production (`allowInstantDemo` false;
-      no `frontend/config.js` deployed)
+- [ ] Instant Demo is available only on localhost/loopback, private LAN, or direct `file:` preview;
+      verify it remains unavailable on staging/production even if config enables it
 - [ ] `/readyz` fails when the database is down
 - [ ] User A cannot like/comment/invite using user B's resource IDs
 - [ ] Wrong password shows a generic error, not "user not found" vs "wrong password"

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://collab.app/</loc>
+  </url>
+  <url>
+    <loc>https://collab.app/#/about</loc>
+  </url>
+  <url>
+    <loc>https://collab.app/#/stories</loc>
+  </url>
+  <url>
+    <loc>https://collab.app/#/security</loc>
+  </url>
+  <url>
+    <loc>https://collab.app/#/contact</loc>
+  </url>
+  <url>
+    <loc>https://collab.app/#/login</loc>
+  </url>
+  <url>
+    <loc>https://collab.app/#/signup</loc>
+  </url>
+</urlset>

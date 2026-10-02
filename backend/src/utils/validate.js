@@ -25,7 +25,7 @@ const schemas = {
     tagline: z.string().trim().max(140).optional(),
     bio: z.string().trim().max(1000).optional(),
     isPublic: z.boolean().optional(),
-  }),
+  }).refine((data) => Object.keys(data).length > 0, { message: 'Provide at least one team field to update.' }),
   invite: z.object({
     email: z.string().trim().email().max(200).toLowerCase(),
     role: z.enum(['admin', 'member']).default('member'),

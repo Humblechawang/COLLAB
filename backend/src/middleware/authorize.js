@@ -1,4 +1,13 @@
 const db = require('../db/pool');
+const TEAM_ADMIN_ROLES = new Set(['owner', 'admin']);
+
+function canManageTeam(role) {
+  return TEAM_ADMIN_ROLES.has(role);
+}
+
+function canDeleteOwnedResource(ownerId, actorId, role) {
+  return Boolean(actorId && ownerId && (ownerId === actorId || canManageTeam(role)));
+}
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -84,4 +93,5 @@ async function requirePublicOrMember(req, res, next) {
 
 module.exports = {
   loadMembership, requireMember, requireRole, requirePublicOrMember, requireTeamId, UUID_RE,
+  canManageTeam, canDeleteOwnedResource,
 };

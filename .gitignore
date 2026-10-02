@@ -22,3 +22,13 @@ dump.sql
 *.tfstate.*
 .idea/
 .vscode/
+
+# Local certificates / TLS material
+backend/certs/
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Accidental nested project copy
+collab/

@@ -28,7 +28,7 @@ Errors: `{ "error": "message", "requestId": "..." }`.
 |---|---|---|---|
 | POST | `/api/teams` | confirmed email | Create team; caller becomes owner |
 | GET | `/api/teams/:teamId` | public if public team, else member | Team profile |
-| PATCH | `/api/teams/:teamId` | owner/admin | name, tagline, bio, `isPublic` |
+| PATCH | `/api/teams/:teamId` | owner/admin | Update name/tagline/bio or set `isPublic` true/false; visibility changes are audited |
 
 ## Members
 
@@ -49,7 +49,7 @@ Errors: `{ "error": "message", "requestId": "..." }`.
 
 ## Posts / work
 
-GET list (public vs member visibility). POST JSON only. **Multipart uploads return 503.** DELETE author or admin/owner. Likes/comments require membership and matching `team_id`.
+GET list (public vs member visibility). POST JSON only. **Multipart uploads return 503.** Members may soft-delete only their own posts/work; owners/admins may soft-delete any team item. Deletes re-check current membership and role in the mutation. Likes/comments require membership and matching `team_id`.
 
 ## Rate limits (defaults)
 

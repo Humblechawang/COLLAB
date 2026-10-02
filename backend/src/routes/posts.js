@@ -4,7 +4,7 @@ const db = require('../db/pool');
 const config = require('../config');
 const { validate } = require('../utils/validate');
 const { requireAuth, optionalAuth } = require('../middleware/auth');
-const { loadMembership, requireMember, requirePublicOrMember } = require('../middleware/authorize');
+const { loadMembership, requireMember, requirePublicOrMember, canDeleteOwnedResource } = require('../middleware/authorize');
 const { rejectUploads } = require('../middleware/upload');
 const { logAction } = require('../utils/audit');
 
@@ -60,14 +60,27 @@ router.delete('/:teamId/posts/:postId', requireAuth, loadMembership(), requireMe
   try {
     const post = await loadTeamPost(req, req.teamId, req.params.postId);
     if (!post) return res.status(404).json({ error: 'Post not found.' });
-    const isOwnerOfPost = post.author_id === req.user.id;
-    const isAdmin = ['owner', 'admin'].includes(req.membership.role);
-    if (!isOwnerOfPost && !isAdmin) {
+    if (!canDeleteOwnedResource(post.author_id, req.user.id, req.membership.role)) {
       const err = new Error('You can only delete your own posts.');
       err.status = 403;
       return next(err);
     }
-    await db.query(req, 'update posts set deleted_at = now() where id = $1 and team_id = $2', [req.params.postId, req.teamId]);
+    const { rowCount } = await db.query(
+      req,
+      `update posts p set deleted_at = now()
+       where p.id = $1 and p.team_id = $2 and p.deleted_at is null
+         and exists (
+           select 1 from members m where m.team_id = p.team_id and m.user_id = $3
+         )
+         and (
+           p.author_id = $3
+           or exists (
+             select 1 from members m where m.team_id = p.team_id and m.user_id = $3 and m.role in ('owner', 'admin')
+           )
+         )`,
+      [req.params.postId, req.teamId, req.user.id],
+    );
+    if (!rowCount) return res.status(404).json({ error: 'Post not found.' });
     await logAction(req, { actorId: req.user.id, teamId: req.teamId, action: 'post.deleted', target: req.params.postId });
     res.json({ ok: true });
   } catch (err) { next(err); }

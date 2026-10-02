@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Collab - Product Requirements Document</title>
+    <style>
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        line-height: 1.6;
+        color: #1f2937;
+        max-width: 980px;
+        margin: 32px auto;
+        padding: 0 28px 36px;
+        background: #ffffff;
+      }
+      h1, h2, h3 {
+        color: #111827;
+        margin-top: 28px;
+        margin-bottom: 12px;
+      }
+      h1 {
+        font-size: 30px;
+        border-bottom: 2px solid #dbeafe;
+        padding-bottom: 12px;
+        margin-bottom: 20px;
+      }
+      h2 {
+        font-size: 22px;
+        margin-top: 28px;
+      }
+      h3 {
+        font-size: 18px;
+      }
+      p, li {
+        font-size: 15px;
+      }
+      ul, ol {
+        padding-left: 22px;
+      }
+      .section-label {
+        color: #2563eb;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        font-size: 12px;
+      }
+      .card {
+        border-left: 4px solid #2563eb;
+        background: #f8fafc;
+        padding: 12px 16px;
+        margin: 18px 0;
+      }
+      .meta {
+        font-size: 13px;
+        color: #4b5563;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="section-label">Product Requirements Document</div>
+    <h1>Collab</h1>
+
+    <h2>1. Product Mission</h2>
+    <p>Collab helps hackathon teams, clubs, student communities, and early-stage startups showcase who they are, what they build, and how others can collaborate with them. The product creates a simple public-facing portfolio where teams can present their identity, projects, and work while using secure authentication and role-based permissions for internal collaboration.</p>
+
+    <div class="card">
+      <strong>Mission Statement:</strong> To make team visibility and collaboration effortless by turning a group’s work, story, and momentum into a trusted, public digital presence.
+    </div>
+
+    <h2>2. Product Summary</h2>
+    <p>The current project architecture is a three-layer system:</p>
+    <ul>
+      <li>Static frontend for public browsing and team pages</li>
+      <li>Express backend for authenticated business logic and team management</li>
+      <li>Supabase Auth + Postgres for identity, authorization, and row-level security</li>
+    </ul>
+    <p>This design intentionally keeps the browser away from direct database access. The frontend is a public experience, while protected actions are routed through the API layer, which enforces JWT-based authentication and scoped authorization.</p>
+
+    <h2>3. Problem Statement</h2>
+    <p>Many teams lack a polished, low-friction way to present themselves online. They often rely on disconnected tools like LinkedIn profiles, GitHub repos, docs, and informal channels that are fragmented and difficult to maintain.</p>
+    <ul>
+      <li>Limited discoverability of team identity and capabilities</li>
+      <li>No consistent workspace for public project storytelling</li>
+      <li>Weak internal coordination for team leadership and onboarding</li>
+      <li>A fragmented experience that makes collaboration harder than it should be</li>
+    </ul>
+    <p>Collab solves this by providing a unified, public-facing presence with secure private collaboration behind the scenes.</p>
+
+    <h2>4. Target Users</h2>
+    <h3>Primary Users</h3>
+    <h3>Team Founders / Owners</h3>
+    <ul>
+      <li>Create team profiles</li>
+      <li>Publish project work and visible updates</li>
+      <li>Invite teammates and assign roles</li>
+      <li>Manage public-facing identity and messaging</li>
+    </ul>
+    <h3>Team Members</h3>
+    <ul>
+      <li>View team portfolio and access internal team content</li>
+      <li>Update personal profile information</li>
+      <li>Collaborate on public/private team activities</li>
+      <li>Participate in project and work workflows</li>
+    </ul>
+    <h3>Visitors / Recruiters / Community Members</h3>
+    <ul>
+      <li>Discover teams and projects</li>
+      <li>Review public portfolios, project work, and team bios</li>
+      <li>Learn how to reach out or collaborate</li>
+    </ul>
+
+    <h2>5. Product Goals</h2>
+    <ul>
+      <li>Increase visibility for teams and communities</li>
+      <li>Create a trusted platform for project discovery</li>
+      <li>Support community-driven networking and collaboration</li>
+      <li>Build a reusable portfolio engine for teams across multiple contexts</li>
+    </ul>
+
+    <h2>6. Core User Flows</h2>
+    <ul>
+      <li>User signs in through Supabase Auth</li>
+      <li>User creates a team with name, slug, and tagline</li>
+      <li>System validates slug uniqueness</li>
+      <li>System creates team record and assigns owner membership</li>
+      <li>Public visitors access a Team page and see permitted work items</li>
+      <li>Authenticated members can access more secure content and team operations</li>
+    </ul>
+
+    <h2>7. Functional Requirements</h2>
+    <h3>Authentication and Session Management</h3>
+    <ul>
+      <li>Users sign in using Supabase Auth</li>
+      <li>Browser requests include bearer tokens to the API</li>
+      <li>The API validates JWTs and enforces identity-based access rules</li>
+      <li>Role checks and membership checks are applied to protected routes</li>
+    </ul>
+
+    <h3>Team Management</h3>
+    <ul>
+      <li>Create teams with unique slug URLs</li>
+      <li>Update team details for owners/admins</li>
+      <li>Maintain public or private visibility rules</li>
+    </ul>
+
+    <h3>Membership and Permissions</h3>
+    <ul>
+      <li>Owner, admin, and member privileges supported</li>
+      <li>Sensitive operations require higher roles</li>
+      <li>Membership validation enforced centrally</li>
+    </ul>
+
+    <h3>Work / Portfolio Items</h3>
+    <ul>
+      <li>Allow project entries with title, description, status, link, and visibility</li>
+      <li>Support creation and deletion permissions</li>
+      <li>Filter public vs. member-only content</li>
+    </ul>
+
+    <h2>8. Non-Functional Requirements</h2>
+    <ul>
+      <li>Security-first design with API-mediated access</li>
+      <li>Row-Level Security to protect database data</li>
+      <li>Fast public reads for portfolio pages</li>
+      <li>Minimal exposure of private content</li>
+      <li>Accessibility and mobile-friendly presentation</li>
+    </ul>
+
+    <h2>9. MVP Scope</h2>
+    <ul>
+      <li>User authentication via Supabase Auth</li>
+      <li>Team creation and details</li>
+      <li>Public/private team experiences</li>
+      <li>Member roles and access control</li>
+      <li>Work showcase entries</li>
+      <li>Public portfolio browsing</li>
+      <li>Profile editing</li>
+      <li>Health checks and secure API design</li>
+    </ul>
+
+    <h2>10. Risks and Constraints</h2>
+    <ul>
+      <li>Unauthorized access due to inconsistent security checks</li>
+      <li>Overexposure of private data in public lists</li>
+      <li>Slug collisions and team naming confusion</li>
+      <li>Uploads require additional storage/security review before activation</li>
+    </ul>
+
+    <h2>11. Recommended Next Steps</h2>
+    <ol>
+      <li>Validate the team and work portfolio flows with real users</li>
+      <li>Tighten invite and role management based on observed usage</li>
+      <li>Prioritize public-facing trust and clarity</li>
+      <li>Introduce storage and richer media only after security review</li>
+      <li>Expand gradually based on evidence from engagement and usability</li>
+    </ol>
+
+    <div class="meta">
+      <p>Repository-derived findings: static frontend, Express API, Supabase Auth, Postgres RLS, audit logging, and team/work route architecture confirm the product is aligned around a portfolio-first collaboration model.</p>
+    </div>
+  </body>
+</html>

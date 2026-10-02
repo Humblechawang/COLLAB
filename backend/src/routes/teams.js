@@ -63,7 +63,14 @@ router.patch(
          where id = $5 returning *`,
         [name ?? null, tagline ?? null, bio ?? null, isPublic ?? null, req.teamId],
       );
-      await logAction(req, { actorId: req.user.id, teamId: req.teamId, action: 'team.updated' });
+      if (!rows[0]) return res.status(404).json({ error: 'Team not found.' });
+      await logAction(req, {
+        actorId: req.user.id,
+        teamId: req.teamId,
+        action: typeof isPublic === 'boolean' ? 'team.visibility_changed' : 'team.updated',
+        target: req.teamId,
+        metadata: typeof isPublic === 'boolean' ? { isPublic } : undefined,
+      });
       res.json({ team: rows[0] });
     } catch (err) { next(err); }
   },
