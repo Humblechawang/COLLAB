@@ -1,7 +1,7 @@
 # Deployment
 
 - **Frontend:** static files. Copy `frontend/config.example.js` → `frontend/config.js` (gitignored). Publishable key only. No PostgREST from the browser.
-- **API:** Node 20. `DATABASE_URL` = pooler as **collab_api**. `DATABASE_MIGRATE_URL` = session/direct as migrator only.
+- **API:** Node 20. For this monorepo, set the deployment service's **Root Directory** to `backend`; the API entrypoint is `backend/src/server.js`, not a root-level `app.js`/`server.js`. Use `npm ci` to install and `npm start` to run (the package start script launches `src/server.js` and listens on the platform-provided `PORT`). No separate build step is required. `DATABASE_URL` = pooler as **collab_api**. `DATABASE_MIGRATE_URL` = session/direct as migrator only.
 - **Auth:** Supabase Auth. Express verifies JWTs via JWKS at `{SUPABASE_URL}/auth/v1`.
 - **Data API:** off. Frontend must not call PostgREST.
 - Configure Supabase Auth before signup testing: require email confirmation, use a six-digit `{{ .Token }}` email OTP template, and set minimum password length to six with uppercase, lowercase, number, and special-character requirements.

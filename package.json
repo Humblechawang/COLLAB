@@ -4,6 +4,7 @@
   "description": "Collab — Team portfolio platform (workspace root)",
   "private": true,
   "scripts": {
+    "start": "npm --prefix backend start",
     "backend": "npm --prefix backend run dev",
     "frontend": "npx -y http-server frontend -p 8080 --cors -c-1",
     "dev": "npx -y concurrently -n backend,frontend -c blue,magenta \"npm --prefix backend run dev\" \"npx http-server frontend -p 8080 --cors -c-1\""
