@@ -5,18 +5,9 @@ against a live deployment yet — treat every box as unchecked.
 
 ## Functional
 
-- [ ] At phone width, brand lockup reads as C + “ollab” and dashboard controls stay aligned
-- [ ] Home update rail and post media scroll horizontally; Posts timeline scrolls vertically
-- [ ] Scroll reveals and heading shimmer run once and respect reduced motion
-- [ ] Sign up rejects passwords shorter than 6 or missing uppercase, lowercase, digit, or special character
-- [ ] Sign up sends a six-digit email OTP; valid, invalid, expired, and resent codes behave correctly
-- [ ] Existing email is directed to sign-in; sign-in uses the same generic error for unknown email and wrong password
-- [ ] Sign in, sign out, and token refresh all work end to end
-- [ ] No Instant Demo or shared demo-account sign-in entry point remains
-- [ ] A verified account reaches team setup and is shown as Owner; Admin/Member are assigned per invite
-- [ ] Team setup clearly states it is non-persistent until the identity/RLS migration is approved
-- [ ] `/readyz` fails when the database is down
-- [ ] User A cannot like/comment/invite using user B's resource IDs
+- [ ] Sign up, log in, log out, and token refresh all work end to end
+- [ ] Wrong password shows a generic error, not "user not found" vs "wrong password"
+- [ ] Account locks after repeated failed logins and unlocks after the cooldown
 - [ ] Creating a team assigns the creator as owner
 - [ ] Inviting a member sends an email (or logs the link in dev) and the
       invite can be accepted exactly once
@@ -33,7 +24,7 @@ against a live deployment yet — treat every box as unchecked.
 
 - [ ] `npm audit` (or Snyk) run against both `backend` and any frontend
       build tooling, high/critical issues resolved
-- [ ] Supabase Auth rate limits confirmed to trigger for login, signup, and OTP requests; API auth routes return 410
+- [ ] Rate limits confirmed to trigger under load (`/api/auth/login` especially)
 - [ ] CORS rejects an unlisted origin
 - [ ] Cookies are `HttpOnly`, `Secure`, `SameSite=Strict` in a production-like environment
 - [ ] SQL injection attempted against every text input and rejected (parameterized queries should hold)

@@ -1,66 +1,89 @@
 # API Reference
 
-Base URL: local `http://localhost:4000`. Send `Authorization: Bearer <Supabase access token>`. Cookies are not used for auth.
+Base URL: `https://api.collab.app` (local: `http://localhost:4000`)
 
-Sign-up, sign-in, and password reset are **Supabase Auth**, not this API (`POST /api/auth/signup|login|refresh` return **410**).
+All authenticated requests rely on the `access_token` httpOnly cookie set by
+`/api/auth/login` or `/api/auth/signup`. If you're calling the API from a
+non-browser client, you may instead send `Authorization: Bearer <token>`.
 
-GET `/healthz` — liveness.  
-GET `/readyz` — 503 if Postgres is unreachable.
-
-Invite `role` may be `admin` or `member` only.
-
-Errors: `{ "error": "message", "requestId": "..." }`.
+Every error response has the shape `{ "error": "message", "requestId": "..." }`.
 
 ## Auth
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| POST | `/api/auth/signup` | none | **410** — use Supabase Auth |
-| POST | `/api/auth/login` | none | **410** |
-| POST | `/api/auth/refresh` | none | **410** |
-| POST | `/api/auth/logout` | required | Audit log only (JWT cannot be revoked here) |
-| GET | `/api/auth/me` | required, confirmed email | Upsert `profiles` for `sub` |
-| PATCH | `/api/auth/me` | required, confirmed email | `fullName`, `bio` |
+| POST | `/api/auth/signup` | none | Create an account. Body: `fullName, email, password` |
+| POST | `/api/auth/login` | none | Sign in. Body: `email, password` |
+| POST | `/api/auth/refresh` | refresh cookie | Rotate tokens |
+| POST | `/api/auth/logout` | required | Revoke all sessions for the caller |
+| GET | `/api/auth/me` | required | Current user profile |
 
 ## Teams
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| POST | `/api/teams` | confirmed email | Create team; caller becomes owner |
-| GET | `/api/teams/:teamId` | public if public team, else member | Team profile |
-| PATCH | `/api/teams/:teamId` | owner/admin | Update name/tagline/bio or set `isPublic` true/false; visibility changes are audited |
+| POST | `/api/teams` | required | Create a team. Body: `name, slug, tagline?`. Caller becomes owner. |
+| GET | `/api/teams/:teamId` | public if team is public, else member | Team profile |
+| PATCH | `/api/teams/:teamId` | owner/admin | Update name, tagline, bio, `isPublic` |
 
 ## Members
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| GET | `/api/teams/:teamId/members` | member | List members |
-| PATCH | `/api/teams/:teamId/members/:userId/role` | owner | Change role |
-| DELETE | `/api/teams/:teamId/members/:userId` | owner/admin | Remove member |
+| GET | `/api/teams/:teamId/members` | member | List members with roles |
+| PATCH | `/api/teams/:teamId/members/:userId/role` | owner | Change a member's role |
+| DELETE | `/api/teams/:teamId/members/:userId` | owner/admin | Remove a member |
 
 ## Invites
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| POST | `/api/teams/:teamId/invites` | owner/admin | Invite by email |
-| GET | `/api/teams/:teamId/invites` | owner/admin | Pending invites |
-| DELETE | `/api/teams/:teamId/invites/:inviteId` | owner/admin | Revoke |
-| POST | `/api/teams/accept` | confirmed email | Body: `token`. Email must match invite |
+| POST | `/api/teams/:teamId/invites` | owner/admin | Invite by email. Body: `email, role?` |
+| GET | `/api/teams/:teamId/invites` | owner/admin | List pending invites |
+| DELETE | `/api/teams/:teamId/invites/:inviteId` | owner/admin | Revoke a pending invite |
+| POST | `/api/teams/accept` | required | Accept an invite. Body: `token` |
 
-## Posts / work
+## Posts
 
-GET list (public vs member visibility). POST JSON only. **Multipart uploads return 503.** Members may soft-delete only their own posts/work; owners/admins may soft-delete any team item. Deletes re-check current membership and role in the mutation. Likes/comments require membership and matching `team_id`.
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/api/teams/:teamId/posts` | public if visible | Feed (up to 50 latest) |
+| POST | `/api/teams/:teamId/posts` | member | Create a post. `multipart/form-data`: `tag, body, linkUrl?, visibility?, images[]` (up to 4) |
+| DELETE | `/api/teams/:teamId/posts/:postId` | author or owner/admin | Soft-delete a post |
+| POST | `/api/teams/:teamId/posts/:postId/like` | member | Like a post |
+| DELETE | `/api/teams/:teamId/posts/:postId/like` | member | Unlike a post |
+| POST | `/api/teams/:teamId/posts/:postId/comments` | member | Comment. Body: `body` |
 
-## Rate limits (defaults)
+## Work items
 
-- General: 100 / 15 min / IP
-- Auth paths: 10 / 15 min / IP
-- Invites: 20 / hour / IP
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/api/teams/:teamId/work` | public if visible | List work items |
+| POST | `/api/teams/:teamId/work` | member | Create. `multipart/form-data`: `title, description?, status, linkUrl?, visibility?, attachment?` |
+| DELETE | `/api/teams/:teamId/work/:workId` | creator or owner/admin | Soft-delete a work item |
 
-## Frontend
+## Health
 
-Use Supabase JS Auth for sign-up, sign-in, six-digit OTP verification/resend, and sign-out; use this API for protected business operations. Do not query tables through the Data API.
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/healthz` | none | Liveness check for load balancers / container orchestration |
 
-The team setup screen is currently non-persistent. Auth-backed writes remain blocked until the legacy `public.users` identity and RLS migration plan is approved; do not bypass this with direct PostgREST calls or a service-role key.
+## Rate limits (defaults, configurable via `.env`)
 
-Use Supabase JS **Auth** + Bearer to this API. Do not query tables through the Data API.
+- General API: 100 requests / 15 min / IP
+- Auth endpoints: 10 requests / 15 min / IP
+- Invite creation: 20 / hour / team
+
+## Connecting the current frontend
+
+`frontend/index.html` currently keeps all state in an in-memory JS object
+(`S`) and never calls this API. To connect it:
+
+1. Replace the in-memory `S.users`, `S.posts`, `S.work`, etc. reads/writes
+   with `fetch()` calls to the endpoints above.
+2. Send `credentials: 'include'` on every fetch so the auth cookies attach.
+3. On a 401 response, call `/api/auth/refresh` once and retry; on a second
+   401, redirect to `/login`.
+4. Replace the client-side form validation with the server's actual
+   422 error messages (keep the client-side checks too, as a UX nicety —
+   the server validation is what actually matters for security).
